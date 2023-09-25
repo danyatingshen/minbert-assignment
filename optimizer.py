@@ -1,5 +1,5 @@
 from typing import Callable, Iterable, Tuple
-
+import math
 import torch
 from torch.optim import Optimizer
 
@@ -38,26 +38,40 @@ class AdamW(Optimizer):
                 if grad.is_sparse:
                     raise RuntimeError("Adam does not support sparse gradients, please consider SparseAdam instead")
 
-                # todo
-                raise NotImplementedError()
-
-                # State should be stored in this dictionary
-                state = self.state[p]
-
-                # Access hyperparameters from the `group` dictionary
+                # Hyperparameters
+                beta1, beta2 = group["betas"]
                 alpha = group["lr"]
+                eps = group["eps"]
+                weight_decay = group["weight_decay"]
+                correct_bias = group["correct_bias"]
 
-                # Update first and second moments of the gradients
+                state = self.state[p]
+                # State initialization
+                if len(state) == 0:
+                    state["step"] = 0
+                    # Exponential moving average of gradient values
+                    state["exp_avg"] = torch.zeros_like(p.data)
+                    # Exponential moving average of squared gradient values
+                    state["exp_avg_sq"] = torch.zeros_like(p.data)
 
-                # Bias correction
-                # Please note that we are using the "efficient version" given in
-                # https://arxiv.org/abs/1412.6980
+                # Update step
+                exp_avg_grad = state["exp_avg"]
+                exp_avg_sqr_grad = state["exp_avg_sq"]
+                state["step"] += 1
 
-                # Update parameters
-                # Please note: you should update p.data (not p), to avoid an error about a leaf Variable being used in an in-place operation
+                exp_avg_grad.mul_(beta1).add_(grad, alpha=1.0 - beta1)
+                exp_avg_sqr_grad.mul_(beta2).addcmul_(grad, grad, value=1.0 - beta2)
 
-                # Add weight decay after the main gradient-based updates.
-                # Please note that, *unlike in https://arxiv.org/abs/1711.05101*, the learning rate should be incorporated into this update.
-                # Please also note: you should update p.data (not p), to avoid an error about a leaf Variable being used in an in-place operation
+                if correct_bias:
+                    bias_correction1 = 1.0 - beta1 ** state["step"]
+                    bias_correction2 = 1.0 - beta2 ** state["step"]
+                    step_size = alpha * math.sqrt(bias_correction2) / bias_correction1
+                else:
+                    step_size = alpha
+
+                p.data.addcdiv_(exp_avg_grad, exp_avg_sqr_grad.sqrt().add_(eps), value=-step_size)
+
+                if weight_decay > 0.0:
+                    p.data.add_(p.data, alpha=-alpha * weight_decay)
 
         return loss

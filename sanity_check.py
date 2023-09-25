@@ -18,3 +18,25 @@ for k in ['last_hidden_state', 'pooler_output']:
     assert torch.allclose(outputs[k], sanity_data[k], atol=1e-5, rtol=1e-3)
 print("Your BERT implementation is correct!")
 
+
+from bert import BertSelfAttention
+import torch
+
+# class Config:
+#     def __init__(self):
+#         self.hidden_size = 512
+#         self.num_attention_heads = 8
+#
+# config = Config()
+# attention_module = BertSelfAttention(config)
+# # Sample hidden states
+# hidden_states = torch.randn(3, 7, config.hidden_size)
+#
+# # Sample attention mask (with padding for the second and third sequences)
+# attention_mask = torch.tensor([
+#     [[[0, 0, 0, 0, 0, 0, 0]]],
+#     [[[0, 0, 0, 0, 0, 0, -1e9]]],  # Last token is padding
+#     [[[0, 0, 0, 0, 0, -1e9, -1e9]]]  # Last two tokens are padding
+# ])
+# output = attention_module(hidden_states, attention_mask)
+# print(output.shape)  # Expected: torch.Size([3, 7, 512])
